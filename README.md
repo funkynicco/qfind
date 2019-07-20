@@ -2,6 +2,8 @@
 
 QFind "Quick Finder" is a console tool to search in files. It is designed to be used alongside a big code project.
 
+![Screenshot](fqeqfsad.jpg)
+
 It uses multiple threads to scan through files using the provided Regex search string.
 
 ## Usage
