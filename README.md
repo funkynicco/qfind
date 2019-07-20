@@ -2,7 +2,7 @@
 
 QFind "Quick Finder" is a console tool to search in files. It is designed to be used alongside a big code project.
 
-![Screenshot](fqeqfsad.jpg)
+![Screenshot One](screenshot1.png)
 
 It uses multiple threads to scan through files using the provided Regex search string.
 
@@ -31,3 +31,9 @@ Find regex> something\s*=\s*"\.*+"
 By default QFind will ignore hidden files and folders. This can be overriden by passing the `-a` argument.
 
 `qfind.exe -a -i test`
+
+A simplified result view can be achieved with the `-s` argument. This view does not display surrounding lines, which provides a compact view if there are a lot of results.
+
+`qfind -s threadData`
+
+![Screenshot Two](screenshot2.png)
