@@ -71,7 +71,7 @@ namespace QFind
             }
         }
 
-        static void ListMatches(ref Statistics statistics, ThreadData threadData)
+        static void ListMatches(ref Statistics statistics, ThreadData threadData, bool simple)
         {
             if (threadData.Matches.Count == 0)
                 return;
@@ -88,13 +88,16 @@ namespace QFind
             foreach (var match in threadData.Matches)
             {
                 var i = match.Line - 1;
-                for (int j = Math.Max(0, i - 5); j < i; ++j)
+                if (!simple)
                 {
-                    Console.Write($"{(j + 1).ToString().PadLeft(6)}: ");
-                    var part = threadData.Lines[j];
-                    if (part.Length > MaxPrintLength - 3)
-                        part = part.Substring(0, MaxPrintLength - 3) + "...";
-                    Console.WriteLine(part);
+                    for (int j = Math.Max(0, i - 5); j < i; ++j)
+                    {
+                        Console.Write($"{(j + 1).ToString().PadLeft(6)}: ");
+                        var part = threadData.Lines[j];
+                        if (part.Length > MaxPrintLength - 3)
+                            part = part.Substring(0, MaxPrintLength - 3) + "...";
+                        Console.WriteLine(part);
+                    }
                 }
 
                 Console.Write($"{(i + 1).ToString().PadLeft(6)}: ");
@@ -132,13 +135,16 @@ namespace QFind
                 Console.WriteLine(chunk_after);
                 Console.ForegroundColor = ConsoleColor.Gray;
 
-                for (int j = i + 1; j < Math.Min(threadData.Lines.Length, i + 6); ++j)
+                if (!simple)
                 {
-                    Console.Write($"{(j + 1).ToString().PadLeft(6)}: ");
-                    var part = threadData.Lines[j];
-                    if (part.Length > MaxPrintLength - 3)
-                        part = part.Substring(0, MaxPrintLength - 3) + "...";
-                    Console.WriteLine(part);
+                    for (int j = i + 1; j < Math.Min(threadData.Lines.Length, i + 6); ++j)
+                    {
+                        Console.Write($"{(j + 1).ToString().PadLeft(6)}: ");
+                        var part = threadData.Lines[j];
+                        if (part.Length > MaxPrintLength - 3)
+                            part = part.Substring(0, MaxPrintLength - 3) + "...";
+                        Console.WriteLine(part);
+                    }
                 }
             }
         }
@@ -191,6 +197,8 @@ namespace QFind
             var searchRegex = string.Empty;
             var ignoreCase = false;
             var includeHidden = false;
+            var simple = false;
+
             for (int i = 0; i < args.Length; ++i)
             {
                 if (args[i] == "-i")
@@ -200,6 +208,10 @@ namespace QFind
                 else if (args[i] == "-a")
                 {
                     includeHidden = true;
+                }
+                else if (args[i] == "-s")
+                {
+                    simple = true;
                 }
                 else if (args[i] == "--ext")
                 {
@@ -269,7 +281,7 @@ namespace QFind
                     for (int i = 0; i < backlog_count; ++i)
                     {
                         backlog_threads[i].Join();
-                        ListMatches(ref statistics, backlog[i]);
+                        ListMatches(ref statistics, backlog[i], simple);
                     }
 
                     backlog_count = 0;
@@ -279,7 +291,7 @@ namespace QFind
             for (int i = 0; i < backlog_count; ++i)
             {
                 backlog_threads[i].Join();
-                ListMatches(ref statistics, backlog[i]);
+                ListMatches(ref statistics, backlog[i], simple);
             }
 
             stopwatch.Stop();
