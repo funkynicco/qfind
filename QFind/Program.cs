@@ -140,10 +140,10 @@ namespace QFind
 
             var results_str = $"{threadData.Matches.Count} result{(threadData.Matches.Count == 1 ? "" : "s")} ";
 
-            Console.Write(results_str.PadLeft(Console.BufferWidth - threadData.Filename.Length - 2));
+            Console.Write(results_str.PadLeft(Console.BufferWidth - threadData.Filename.Length - 1));
             Console.BackgroundColor = ConsoleColor.Black;
 
-            Console.WriteLine();
+            //Console.WriteLine();
             Console.WriteLine();
 
             int MaxPrintLength = Console.BufferWidth - 12;
@@ -419,18 +419,35 @@ namespace QFind
 
                 stopwatch.Stop();
 
+                var str = "";
+
+                var canceled = cancelEvent.WaitOne(0);
+
+                Console.ForegroundColor = ConsoleColor.White;
+
                 if (statistics.TotalMatches != 0)
                 {
                     Console.WriteLine();
-                    Console.Write($"{statistics.TotalMatches} matches found in {statistics.Files} files");
+
+                    Console.BackgroundColor = canceled ? ConsoleColor.DarkYellow : ConsoleColor.DarkGreen;
+                    str = $" {statistics.TotalMatches} matches found in {statistics.Files} files";
                 }
                 else
-                    Console.Write($"No matches found");
-
-                Console.WriteLine($" ({statistics.TotalFilesScanned} files scanned - {stopwatch.Elapsed})");
-
-                if (cancelEvent.WaitOne(0))
                 {
+                    Console.BackgroundColor = ConsoleColor.DarkRed;
+                    str = $" No matches found";
+                }
+
+                str += $" ({statistics.TotalFilesScanned} files scanned - {stopwatch.Elapsed})";
+
+                Console.Write(str.PadRight(Console.BufferWidth - 2) + "# ");
+                Console.BackgroundColor = ConsoleColor.Black;
+                Console.ForegroundColor = ConsoleColor.Gray;
+                Console.WriteLine();
+
+                if (canceled)
+                {
+                    Console.WriteLine();
                     Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.WriteLine("<Operation was canceled prematurely>");
                     Console.ForegroundColor = ConsoleColor.Gray;
