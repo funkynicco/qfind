@@ -84,6 +84,18 @@ namespace QFind
                 if (threadData.CancelEvent.WaitOne(0))
                     break;
 
+                var sb = new StringBuilder(threadData.Lines[i].Length);
+                for (int j = 0; j < threadData.Lines[i].Length; ++j)
+                {
+                    char c = threadData.Lines[i][j];
+                    if (c == '\t')
+                        sb.Append("    ");
+                    else
+                        sb.Append(c);
+                }
+
+                threadData.Lines[i] = sb.ToString();
+
                 var match = _searchRegex.Match(threadData.Lines[i]);
                 if (!match.Success)
                     continue;
@@ -123,15 +135,18 @@ namespace QFind
             Console.SetCursorPosition(x, y);
 
             Console.ForegroundColor = ConsoleColor.White;
-            Console.Write(threadData.Filename);
+            Console.Write($" {threadData.Filename}");
             Console.ForegroundColor = ConsoleColor.Gray;
-            Console.Write($" ({threadData.Matches.Count})");
+
+            var results_str = $"{threadData.Matches.Count} result{(threadData.Matches.Count == 1 ? "" : "s")} ";
+
+            Console.Write(results_str.PadLeft(Console.BufferWidth - threadData.Filename.Length - 2));
             Console.BackgroundColor = ConsoleColor.Black;
 
             Console.WriteLine();
             Console.WriteLine();
 
-            int MaxPrintLength = Console.BufferWidth - 11;
+            int MaxPrintLength = Console.BufferWidth - 12;
 
             var printed_lines_hash = new HashSet<int>();
             var match_lines = new HashSet<int>();
