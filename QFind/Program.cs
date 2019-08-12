@@ -33,17 +33,27 @@ namespace QFind
 
         class ThreadData
         {
+            public WaitHandle CancelEvent { get; }
+
             public string Filename { get; private set; }
 
             public string[] Lines { get; set; }
 
             public List<ResultInfo> Matches { get; } = new List<ResultInfo>();
 
+            public Exception Exception { get; set; }
+
+            public ThreadData(WaitHandle cancelEvent)
+            {
+                CancelEvent = cancelEvent;
+            }
+
             public void Reset(string filename)
             {
                 Filename = filename;
                 Lines = null;
                 Matches.Clear();
+                Exception = null;
             }
         }
 
@@ -59,10 +69,21 @@ namespace QFind
         static void ProcessFileThread(object obj)
         {
             var threadData = obj as ThreadData;
-            threadData.Lines = File.ReadAllLines(threadData.Filename);
+            try
+            {
+                threadData.Lines = File.ReadAllLines(threadData.Filename);
+            }
+            catch (Exception ex)
+            {
+                threadData.Exception = ex;
+                return;
+            }
 
             for (int i = 0; i < threadData.Lines.Length; ++i)
             {
+                if (threadData.CancelEvent.WaitOne(0))
+                    break;
+
                 var match = _searchRegex.Match(threadData.Lines[i]);
                 if (!match.Success)
                     continue;
@@ -73,6 +94,15 @@ namespace QFind
 
         static void ListMatches(ref Statistics statistics, ThreadData threadData, bool simple)
         {
+            if (threadData.Exception != null)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Read error of file: {threadData.Filename}");
+                Console.ForegroundColor = ConsoleColor.Gray;
+                Console.WriteLine($"Exception: {threadData.Exception.Message}");
+                return;
+            }
+
             if (threadData.Matches.Count == 0)
                 return;
 
@@ -80,10 +110,19 @@ namespace QFind
             statistics.TotalMatches += threadData.Matches.Count;
 
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine(threadData.Filename);
+            Console.Write(threadData.Filename);
             Console.ForegroundColor = ConsoleColor.Gray;
+            Console.WriteLine($" ({threadData.Matches.Count})");
 
-            const int MaxPrintLength = 80;
+            int MaxPrintLength = Console.BufferWidth - 10;
+
+            var printed_lines_hash = new HashSet<int>();
+            var match_lines = new HashSet<int>();
+            foreach (var match in threadData.Matches)
+            {
+                var i = match.Line - 1;
+                match_lines.Add(i);
+            }
 
             foreach (var match in threadData.Matches)
             {
@@ -92,6 +131,14 @@ namespace QFind
                 {
                     for (int j = Math.Max(0, i - 5); j < i; ++j)
                     {
+                        if (match_lines.Contains(j))
+                            continue;
+
+                        if (printed_lines_hash.Contains(j))
+                            continue;
+
+                        printed_lines_hash.Add(j);
+
                         Console.Write($"{(j + 1).ToString().PadLeft(6)}: ");
                         var part = threadData.Lines[j];
                         if (part.Length > MaxPrintLength - 3)
@@ -139,6 +186,14 @@ namespace QFind
                 {
                     for (int j = i + 1; j < Math.Min(threadData.Lines.Length, i + 6); ++j)
                     {
+                        if (match_lines.Contains(j))
+                            break;
+
+                        if (printed_lines_hash.Contains(j))
+                            continue;
+
+                        printed_lines_hash.Add(j);
+
                         Console.Write($"{(j + 1).ToString().PadLeft(6)}: ");
                         var part = threadData.Lines[j];
                         if (part.Length > MaxPrintLength - 3)
@@ -149,7 +204,7 @@ namespace QFind
             }
         }
 
-        static void RecursiveFind(string folder, bool includeHidden, Action<string> resultAction)
+        static void RecursiveFind(WaitHandle cancelEvent, string folder, bool includeHidden, Action<string> resultAction)
         {
             var filter = folder.Length == 0 ? "*" : folder + "\\*";
             Win32.WIN32_FIND_DATA wfd;
@@ -166,6 +221,9 @@ namespace QFind
 
             do
             {
+                if (cancelEvent.WaitOne(0))
+                    break;
+
                 if (wfd.cFileName == "." ||
                     wfd.cFileName == "..")
                     continue;
@@ -178,7 +236,7 @@ namespace QFind
 
                 if ((wfd.dwFileAttributes & Win32.FILE_ATTRIBUTE_DIRECTORY) != 0)
                 {
-                    RecursiveFind(path, includeHidden, resultAction);
+                    RecursiveFind(cancelEvent, path, includeHidden, resultAction);
                     continue;
                 }
 
@@ -244,67 +302,89 @@ namespace QFind
                     searchRegex = args[i];
             }
 
-            if (string.IsNullOrEmpty(searchRegex))
+            using (var cancelEvent = new ManualResetEvent(false))
             {
-                Console.Write("Find regex> ");
-                searchRegex = Console.ReadLine();
-            }
-
-            var stopwatch = Stopwatch.StartNew();
-
-            var options = RegexOptions.None;
-            if (ignoreCase)
-                options |= RegexOptions.IgnoreCase;
-
-            _searchRegex = new Regex(searchRegex, options);
-
-            var numberOfThreads = Environment.ProcessorCount;
-            var backlog = new ThreadData[numberOfThreads];
-            var backlog_threads = new Thread[numberOfThreads];
-            int backlog_count = 0;
-
-            for (int i = 0; i < backlog.Length; ++i)
-            {
-                backlog[i] = new ThreadData();
-            }
-
-            var statistics = new Statistics();
-
-            RecursiveFind("", includeHidden, (filename) =>
-            {
-                statistics.TotalFilesScanned++;
-
-                backlog[backlog_count].Reset(filename);
-                (backlog_threads[backlog_count] = new Thread(ProcessFileThread)).Start(backlog[backlog_count]);
-                if (++backlog_count == backlog.Length)
+                Console.CancelKeyPress += (sender, e) =>
                 {
-                    for (int i = 0; i < backlog_count; ++i)
-                    {
-                        backlog_threads[i].Join();
-                        ListMatches(ref statistics, backlog[i], simple);
-                    }
+                    e.Cancel = true;
+                    cancelEvent.Set();
+                };
 
-                    backlog_count = 0;
+                if (string.IsNullOrEmpty(searchRegex))
+                {
+                    Console.Write("Find regex> ");
+                    searchRegex = Console.ReadLine();
                 }
-            });
 
-            for (int i = 0; i < backlog_count; ++i)
-            {
-                backlog_threads[i].Join();
-                ListMatches(ref statistics, backlog[i], simple);
+                if (cancelEvent.WaitOne(0) ||
+                    searchRegex == null)
+                    return 0;
+
+                var stopwatch = Stopwatch.StartNew();
+
+                var options = RegexOptions.None;
+                if (ignoreCase)
+                    options |= RegexOptions.IgnoreCase;
+
+                _searchRegex = new Regex(searchRegex, options);
+
+                var numberOfThreads = Environment.ProcessorCount;
+                var backlog = new ThreadData[numberOfThreads];
+                var backlog_threads = new Thread[numberOfThreads];
+                int backlog_count = 0;
+
+                for (int i = 0; i < backlog.Length; ++i)
+                {
+                    backlog[i] = new ThreadData(cancelEvent);
+                }
+
+                var statistics = new Statistics();
+
+                RecursiveFind(cancelEvent, "", includeHidden, (filename) =>
+                {
+                    statistics.TotalFilesScanned++;
+
+                    backlog[backlog_count].Reset(filename);
+                    (backlog_threads[backlog_count] = new Thread(ProcessFileThread)).Start(backlog[backlog_count]);
+                    if (++backlog_count == backlog.Length)
+                    {
+                        for (int i = 0; i < backlog_count; ++i)
+                        {
+                            backlog_threads[i].Join();
+                            if (!cancelEvent.WaitOne(0))
+                                ListMatches(ref statistics, backlog[i], simple);
+                        }
+
+                        backlog_count = 0;
+                    }
+                });
+
+                for (int i = 0; i < backlog_count; ++i)
+                {
+                    backlog_threads[i].Join();
+                    if (!cancelEvent.WaitOne(0))
+                        ListMatches(ref statistics, backlog[i], simple);
+                }
+
+                stopwatch.Stop();
+
+                if (statistics.TotalMatches != 0)
+                {
+                    Console.WriteLine();
+                    Console.Write($"{statistics.TotalMatches} matches found in {statistics.Files} files");
+                }
+                else
+                    Console.Write($"No matches found");
+
+                Console.WriteLine($" ({statistics.TotalFilesScanned} files scanned - {stopwatch.Elapsed})");
+
+                if (cancelEvent.WaitOne(0))
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine("<Operation was canceled prematurely>");
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                }
             }
-
-            stopwatch.Stop();
-
-            if (statistics.TotalMatches != 0)
-            {
-                Console.WriteLine();
-                Console.Write($"{statistics.TotalMatches} matches found in {statistics.Files} files");
-            }
-            else
-                Console.Write($"No matches found");
-
-            Console.WriteLine($" ({statistics.TotalFilesScanned} files scanned - {stopwatch.Elapsed})");
 
             if (Debugger.IsAttached)
                 Console.ReadKey(true);
