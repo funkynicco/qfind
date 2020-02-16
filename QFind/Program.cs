@@ -104,7 +104,7 @@ namespace QFind
             }
         }
 
-        static void ListMatches(ref Statistics statistics, ThreadData threadData, bool simple)
+        static void ListMatches(ref Statistics statistics, ThreadData threadData, bool simple, WaitHandle cancelEvent)
         {
             if (threadData.Exception != null)
             {
@@ -160,6 +160,9 @@ namespace QFind
 
             foreach (var match in threadData.Matches)
             {
+                if (cancelEvent.WaitOne(0))
+                    break;
+
                 var i = match.Line - 1;
 
                 if (!simple)
@@ -255,8 +258,31 @@ namespace QFind
             }
         }
 
+        static bool CheckQFindFileFound(string folder)
+        {
+            // check for .qfind and read its content to determine whether to load this folder
+            
+            Win32.WIN32_FIND_DATA wfd;
+            var hFind = Win32.FindFirstFileEx(
+                Path.Combine(folder, ".qfind"),
+                Win32.FINDEX_INFO_LEVELS.FindExInfoBasic,
+                out wfd,
+                Win32.FINDEX_SEARCH_OPS.FindExSearchNameMatch,
+                IntPtr.Zero,
+                0);
+
+            if (hFind == Win32.INVALID_HANDLE_VALUE)
+                return false;
+
+            Win32.FindClose(hFind);
+            return true;
+        }
+
         static void RecursiveFind(WaitHandle cancelEvent, string folder, bool includeHidden, Action<string> resultAction)
         {
+            if (CheckQFindFileFound(folder)) // TODO: read the content of it and use it as matching filter
+                return;
+
             var filter = folder.Length == 0 ? "*" : folder + "\\*";
             Win32.WIN32_FIND_DATA wfd;
             var hFind = Win32.FindFirstFileEx(
@@ -267,7 +293,7 @@ namespace QFind
                 IntPtr.Zero,
                 Win32.FIND_FIRST_EX_LARGE_FETCH);
 
-            if (hFind == IntPtr.Zero)
+            if (hFind == Win32.INVALID_HANDLE_VALUE)
                 return;
 
             do
@@ -403,7 +429,7 @@ namespace QFind
                         {
                             backlog_threads[i].Join();
                             if (!cancelEvent.WaitOne(0))
-                                ListMatches(ref statistics, backlog[i], simple);
+                                ListMatches(ref statistics, backlog[i], simple, cancelEvent);
                         }
 
                         backlog_count = 0;
@@ -414,7 +440,7 @@ namespace QFind
                 {
                     backlog_threads[i].Join();
                     if (!cancelEvent.WaitOne(0))
-                        ListMatches(ref statistics, backlog[i], simple);
+                        ListMatches(ref statistics, backlog[i], simple, cancelEvent);
                 }
 
                 stopwatch.Stop();
