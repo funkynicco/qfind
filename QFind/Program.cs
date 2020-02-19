@@ -12,7 +12,7 @@ namespace QFind
 {
     class Program
     {
-        static Regex _extensionRegex = new Regex("\\.(txt|cpp|inl|h|c|cs|lua|inc|cfg|ini|json|csv|py|js|html|css|ts)$", RegexOptions.IgnoreCase);
+        static Regex _extensionRegex = new Regex("\\.(txt|cpp|inl|h|c|cs|lua|inc|cfg|ini|json|csv|py|js|html|cshtml|css|ts|java)$", RegexOptions.IgnoreCase);
         static Regex _searchRegex = null;
 
         struct ResultInfo

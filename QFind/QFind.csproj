@@ -52,6 +52,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy "$(TargetPath)" "D:\publicprog\qfind.exe"</PostBuildEvent>
+    <PostBuildEvent>copy "$(TargetPath)" "D:\publicprog\qfind.exe"
+copy "$(TargetPath)" "D:\publicprog\qf.exe"</PostBuildEvent>
   </PropertyGroup>
 </Project>

@@ -15,7 +15,7 @@ The default extensions it search through are the following:
 - Text files (.txt)
 - Code files (.cpp, .c, .h, .inl, .cs)
 - Script files (.lua, .py, .js, .ts)
-- Other formats (.inc, .cfg, .ini, .json, .csv, .html, .css)
+- Other formats (.inc, .cfg, .ini, .json, .csv, .html, .cshtml, .css)
 
 The parameter `--ext` can be used to override the extensions:
 
