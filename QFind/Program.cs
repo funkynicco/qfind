@@ -18,6 +18,7 @@ namespace QFind
             var ignoreCase = false;
             var includeHidden = false;
             var simple = false;
+            var dirs = new List<string>() { "" };
 
             for (int i = 0; i < args.Length; ++i)
             {
@@ -59,6 +60,17 @@ namespace QFind
                     }
 
                     Finder.ExtensionRegex = new Regex($"\\.({extensionRegex.ToString()})$", RegexOptions.IgnoreCase);
+                }
+                else if (args[i] == "--dirs")
+                {
+                    if (i + 1 >= args.Length)
+                    {
+                        Console.WriteLine("--dirs requires an argument that contains a list of comma separated directories to scan.");
+                        return 1;
+                    }
+
+                    dirs.Clear();
+                    dirs.AddRange(args[++i].Split(new char[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries));
                 }
                 else
                     searchRegex = args[i];
@@ -102,24 +114,27 @@ namespace QFind
 
                 var statistics = new Statistics();
 
-                Finder.RecursiveFind(cancelEvent, "", includeHidden, (filename) =>
+                foreach (var dir in dirs)
                 {
-                    statistics.TotalFilesScanned++;
-
-                    backlog[backlog_count].Reset(filename);
-                    (backlog_threads[backlog_count] = new Thread(Finder.ProcessFileThread)).Start(backlog[backlog_count]);
-                    if (++backlog_count == backlog.Length)
+                    Finder.RecursiveFind(cancelEvent, dir, includeHidden, filename =>
                     {
-                        for (int i = 0; i < backlog_count; ++i)
-                        {
-                            backlog_threads[i].Join();
-                            if (!cancelEvent.WaitOne(0))
-                                Finder.ListMatches(ref statistics, backlog[i], simple, cancelEvent);
-                        }
+                        statistics.TotalFilesScanned++;
 
-                        backlog_count = 0;
-                    }
-                });
+                        backlog[backlog_count].Reset(filename);
+                        (backlog_threads[backlog_count] = new Thread(Finder.ProcessFileThread)).Start(backlog[backlog_count]);
+                        if (++backlog_count == backlog.Length)
+                        {
+                            for (int i = 0; i < backlog_count; ++i)
+                            {
+                                backlog_threads[i].Join();
+                                if (!cancelEvent.WaitOne(0))
+                                    Finder.ListMatches(ref statistics, backlog[i], simple, cancelEvent);
+                            }
+
+                            backlog_count = 0;
+                        }
+                    });
+                }
 
                 for (int i = 0; i < backlog_count; ++i)
                 {
