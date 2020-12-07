@@ -11,7 +11,57 @@ namespace QFind
 {
     public class Finder
     {
-        public static Regex ExtensionRegex = new Regex("\\.(txt|cpp|inl|h|c|cs|lua|inc|cfg|ini|json|csv|py|js|html|cshtml|css|ts|java)$", RegexOptions.IgnoreCase);
+        static string[] DefaultExtensions = new string[]
+        {
+            // General
+            "txt",
+            
+            // C/C++
+            "c",
+            "cpp",
+            "h",
+            "hpp",
+            "inl",
+
+            // C#
+            "cs",
+            "cshtml",
+
+            // Visual Basic
+            "vb",
+            "vbs",
+            
+            // Other coding
+            "java",
+
+            // Scripts
+            "lua",
+            "py",
+            "js",
+            "ts",
+            "php",
+
+            // Web
+            "html",
+            "css",
+            "aspx",
+            "ashx",
+            "ascx",
+            "asax",
+            "asp",
+            "master",
+
+            // Config
+            "inc",
+            "cfg",
+            "ini",
+            "json",
+            "csv",
+            "xml",
+            "config"
+        };
+
+        public static Regex ExtensionRegex = new Regex($"\\.({string.Join("|", DefaultExtensions)})$", RegexOptions.IgnoreCase);
         public static Regex ExtensionExcludeRegex = null;
         public static Regex SearchRegex = null;
 
