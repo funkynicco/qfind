@@ -31,7 +31,7 @@ namespace QFind
                     Console.WriteLine($"QFind Version {Version}");
                     return 0;
                 }
-                
+
                 if (args[i] == "-i")
                 {
                     ignoreCase = true;
@@ -55,27 +55,22 @@ namespace QFind
                     var arg = args[++i];
                     if (arg != "*")
                     {
-                        var matches = Regex.Matches(arg, "([a-z0-9_]+)", RegexOptions.IgnoreCase);
-                        if (matches.Count == 0)
-                        {
-                            Console.WriteLine("--ext argument list is empty.");
-                            return 1;
-                        }
-
-                        var extensionRegex = new StringBuilder();
-
-                        foreach (Match match in matches)
-                        {
-                            if (extensionRegex.Length != 0)
-                                extensionRegex.Append('|');
-
-                            extensionRegex.Append(match.Groups[1].Value);
-                        }
-
-                        Finder.ExtensionRegex = new Regex($"\\.({extensionRegex.ToString()})$", RegexOptions.IgnoreCase);
+                        var extensions = Utilities.ReadExtensionsList(arg);
+                        Finder.ExtensionRegex = new Regex($"\\.({string.Join("|", extensions)})$", RegexOptions.IgnoreCase);
                     }
                     else
                         Finder.ExtensionRegex = new Regex(@"\.");
+                }
+                else if (args[i] == "--exc")
+                {
+                    if (i + 1 >= args.Length)
+                    {
+                        Console.WriteLine("--exc requires an argument that contains a list of comma separated file extensions to exclude.");
+                        return 1;
+                    }
+
+                    var extensions = Utilities.ReadExtensionsList(args[++i]);
+                    Finder.ExtensionExcludeRegex = new Regex($"\\.({string.Join("|", extensions)})$", RegexOptions.IgnoreCase);
                 }
                 else if (args[i] == "--dirs")
                 {

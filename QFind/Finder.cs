@@ -12,6 +12,7 @@ namespace QFind
     public class Finder
     {
         public static Regex ExtensionRegex = new Regex("\\.(txt|cpp|inl|h|c|cs|lua|inc|cfg|ini|json|csv|py|js|html|cshtml|css|ts|java)$", RegexOptions.IgnoreCase);
+        public static Regex ExtensionExcludeRegex = null;
         public static Regex SearchRegex = null;
 
         public static void ProcessFileThread(object obj)
@@ -266,6 +267,10 @@ namespace QFind
                 }
 
                 if (!ExtensionRegex.IsMatch(wfd.cFileName))
+                    continue;
+
+                if (ExtensionExcludeRegex != null &&
+                    ExtensionExcludeRegex.IsMatch(wfd.cFileName))
                     continue;
 
                 resultAction(path);

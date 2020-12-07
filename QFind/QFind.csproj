@@ -50,6 +50,7 @@
     <Compile Include="ResultInfo.cs" />
     <Compile Include="Statistics.cs" />
     <Compile Include="ThreadData.cs" />
+    <Compile Include="Utilities.cs" />
     <Compile Include="Win32.cs" />
   </ItemGroup>
   <ItemGroup>
