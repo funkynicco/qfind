@@ -12,6 +12,8 @@ namespace QFind
 {
     class Program
     {
+        const string Version = "1.1";
+
         static int Main(string[] args)
         {
             var searchRegex = string.Empty;
@@ -23,6 +25,13 @@ namespace QFind
 
             for (int i = 0; i < args.Length; ++i)
             {
+                if (args[i] == "-v" ||
+                    args[i] == "--version")
+                {
+                    Console.WriteLine($"QFind Version {Version}");
+                    return 0;
+                }
+                
                 if (args[i] == "-i")
                 {
                     ignoreCase = true;
@@ -43,24 +52,30 @@ namespace QFind
                         return 1;
                     }
 
-                    var matches = Regex.Matches(args[++i], "([a-z0-9_]+)", RegexOptions.IgnoreCase);
-                    if (matches.Count == 0)
+                    var arg = args[++i];
+                    if (arg != "*")
                     {
-                        Console.WriteLine("--ext argument list is empty.");
-                        return 1;
+                        var matches = Regex.Matches(arg, "([a-z0-9_]+)", RegexOptions.IgnoreCase);
+                        if (matches.Count == 0)
+                        {
+                            Console.WriteLine("--ext argument list is empty.");
+                            return 1;
+                        }
+
+                        var extensionRegex = new StringBuilder();
+
+                        foreach (Match match in matches)
+                        {
+                            if (extensionRegex.Length != 0)
+                                extensionRegex.Append('|');
+
+                            extensionRegex.Append(match.Groups[1].Value);
+                        }
+
+                        Finder.ExtensionRegex = new Regex($"\\.({extensionRegex.ToString()})$", RegexOptions.IgnoreCase);
                     }
-
-                    var extensionRegex = new StringBuilder();
-
-                    foreach (Match match in matches)
-                    {
-                        if (extensionRegex.Length != 0)
-                            extensionRegex.Append('|');
-
-                        extensionRegex.Append(match.Groups[1].Value);
-                    }
-
-                    Finder.ExtensionRegex = new Regex($"\\.({extensionRegex.ToString()})$", RegexOptions.IgnoreCase);
+                    else
+                        Finder.ExtensionRegex = new Regex(@"\.");
                 }
                 else if (args[i] == "--dirs")
                 {
