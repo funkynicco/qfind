@@ -12,7 +12,7 @@ namespace QFind
 {
     class Program
     {
-        const string Version = "1.1";
+        public const string Version = "0.2";
 
         static int Main(string[] args)
         {
