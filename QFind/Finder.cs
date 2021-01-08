@@ -61,6 +61,8 @@ namespace QFind
             "config"
         };
 
+        public static Regex IgnoreFolderRegex = new Regex(@"^(\.(git|vs)|node_modules|obj|bin)$", RegexOptions.IgnoreCase);
+
         public static Regex ExtensionRegex = new Regex($"\\.({string.Join("|", DefaultExtensions)})$", RegexOptions.IgnoreCase);
         public static Regex ExtensionExcludeRegex = null;
         public static Regex SearchRegex = null;
@@ -312,7 +314,9 @@ namespace QFind
 
                 if ((wfd.dwFileAttributes & Win32.FILE_ATTRIBUTE_DIRECTORY) != 0)
                 {
-                    RecursiveFind(cancelEvent, path, includeHidden, resultAction);
+                    if (!IgnoreFolderRegex.IsMatch(wfd.cFileName))
+                        RecursiveFind(cancelEvent, path, includeHidden, resultAction);
+
                     continue;
                 }
 
