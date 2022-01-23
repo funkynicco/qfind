@@ -12,7 +12,35 @@ namespace QFind
 {
     class Program
     {
-        public const string Version = "0.3";
+        public static readonly Version AppVersion = Version.Parse("1.0.4");
+
+        static void ShowHelp()
+        {
+            Console.WriteLine("Usage: qf [options] [criteria]");
+            Console.WriteLine("Options:");
+
+            var options = new List<(string Command, string Description)>
+            {
+                ("--help", "Shows this help"),
+                ("--version", "Shows QFind version"),
+
+                ("-i", "Case insensitive"),
+                ("-a", "Include hidden files and folders"),
+                ("-s", "Simple view (one result per line)"),
+                ("-f", "Search for filenames instead of content in files"),
+                ("--ext <extensions>", "Comma separated list of file extensions to include"),
+                ("--exc <extensions>", "Comma separated list of file extensions to exclude"),
+                ("--dirs <directories>", "Comma separated list of directories to include"),
+            };
+
+            var command_length = options.Max(a => a.Command.Length);
+            Console.WriteLine(string.Join(Environment.NewLine, options.Select(a => $"  {a.Command.PadRight(command_length)}    - {a.Description}")));
+
+            Console.WriteLine();
+            Console.WriteLine("Critera:");
+            Console.WriteLine("  Regex string to search on.");
+            Console.WriteLine("  Leave critera blank in order to enter the critera as STDIN input");
+        }
 
         static int Main(string[] args)
         {
@@ -28,7 +56,16 @@ namespace QFind
                 if (args[i] == "-v" ||
                     args[i] == "--version")
                 {
-                    Console.WriteLine($"QFind Version {Version}");
+                    Console.WriteLine($"QFind Version {AppVersion}");
+                    return 0;
+                }
+
+                if (args[i] == "--help" ||
+                    args[i] == "-h" ||
+                    args[i] == "-?" ||
+                    args[i] == "/?")
+                {
+                    ShowHelp();
                     return 0;
                 }
 
