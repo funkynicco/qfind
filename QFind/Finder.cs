@@ -141,7 +141,7 @@ namespace QFind
 
             var results_str = $"{threadData.Matches.Count} result{(threadData.Matches.Count == 1 ? "" : "s")} ";
 
-            Console.Write(results_str.PadLeft(Console.BufferWidth - threadData.Filename.Length - 1));
+            Console.Write(results_str.PadLeft(Math.Max(0, Console.BufferWidth - threadData.Filename.Length - 1)));
             Console.BackgroundColor = ConsoleColor.Black;
 
             //Console.WriteLine();

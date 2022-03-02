@@ -12,7 +12,7 @@ namespace QFind
 {
     class Program
     {
-        public static readonly Version AppVersion = Version.Parse("1.0.4");
+        public static readonly Version AppVersion = Version.Parse("1.0.5");
 
         static void ShowHelp()
         {
